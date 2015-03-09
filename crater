@@ -1,0 +1,193 @@
+#!/bin/bash
+
+packages() {
+cat << "PACKAGES"
+lua-5.0.0 88b1bc057857c0db5ace491c4af2c917a2b803bf http://www.lua.org/ftp/lua-5.0.tar.gz
+lua-5.0.1 03b47b4785178aca583333f01d8726a8ab9f7ae7 http://www.lua.org/ftp/lua-5.0.1.tar.gz
+lua-5.0.2 a200cfd20a9a4c7da1206ae45dddf26186a9e0e7 http://www.lua.org/ftp/lua-5.0.2.tar.gz
+lua-5.0.3 e7e91f78b8a8deb09b13436829bed557a46af8ae http://www.lua.org/ftp/lua-5.0.3.tar.gz
+lua-5.1.0 1ae9ec317511d525c7999c842ca0b1ddde84e374 http://www.lua.org/ftp/lua-5.1.tar.gz
+lua-5.1.1 be13878ceef8e1ee7a4201261f0adf09f89f1005 http://www.lua.org/ftp/lua-5.1.1.tar.gz
+lua-5.1.2 8a460d2d7e70e93cb72bf3d584405464763cb5f0 http://www.lua.org/ftp/lua-5.1.2.tar.gz
+lua-5.1.3 89bc9f5a351402565b8077e8123327e7cd15f004 http://www.lua.org/ftp/lua-5.1.3.tar.gz
+lua-5.1.4 2b11c8e60306efb7f0734b747588f57995493db7 http://www.lua.org/ftp/lua-5.1.4.tar.gz
+lua-5.1.5 b3882111ad02ecc6b972f8c1241647905cb2e3fc http://www.lua.org/ftp/lua-5.1.5.tar.gz
+lua-5.2.0 08f84c355cdd646f617f09cebea48bd832415829 http://www.lua.org/ftp/lua-5.2.0.tar.gz
+lua-5.2.1 6bb1b0a39b6a5484b71a83323c690154f86b2021 http://www.lua.org/ftp/lua-5.2.1.tar.gz
+lua-5.2.2 0857e41e5579726a4cb96732e80d7aa47165eaf5 http://www.lua.org/ftp/lua-5.2.2.tar.gz
+lua-5.2.3 926b7907bc8d274e063d42804666b40a3f3c124c http://www.lua.org/ftp/lua-5.2.3.tar.gz
+lua-5.2.4 ef15259421197e3d85b7d6e4871b8c26fd82c1cf http://www.lua.org/ftp/lua-5.2.4.tar.gz
+lua-5.3.0 1c46d1c78c44039939e820126b86a6ae12dadfba http://www.lua.org/ftp/lua-5.3.0.tar.gz
+luajit-2.0.0 b942f05d41ee193becad285618e7874d113cb976 http://www.luajit.org/download/LuaJIT-2.0.0.tar.gz
+luajit-2.0.1 330492aa5366e4e60afeec72f15e44df8a794db5 http://www.luajit.org/download/LuaJIT-2.0.1.tar.gz
+luajit-2.0.2 d21426c4fc6ad8888255139039a014f7e28e7300 http://www.luajit.org/download/LuaJIT-2.0.2.tar.gz
+luajit-2.0.3 2db39e7d1264918c2266b0436c313fbd12da4ceb http://www.luajit.org/download/LuaJIT-2.0.3.tar.gz
+luarocks-2.1.2 69ea9b641a5066b1f316847494d8c63a4693977d https://github.com/keplerproject/luarocks/archive/v2.1.2.tar.gz
+luarocks-2.2.0 8b29e1a71f5c8f6464a17c607f8d0be1cf76fcef https://github.com/keplerproject/luarocks/archive/v2.2.0.tar.gz
+PACKAGES
+}
+
+package_versions(){
+  (set -o pipefail; packages | cut -d ' ' -f1)
+  return $?
+}
+
+package() {
+  local _version; _version=$1;
+  (set -o pipefail; packages | grep "^$_version ")
+  return $?
+}
+
+package_sha1sum() {
+  local _version; _version=$1;
+  (set -o pipefail;  package "$_version" | cut -d ' ' -f2)
+  return $?
+}
+
+package_url() {
+  local _version; _version=$1;
+  (set -o pipefail; package "$_version" | cut -d ' ' -f3)
+  return $?
+}
+
+download() {
+  local _curl; _curl="$(command -v curl)";
+  if [ "x$_curl" != "x" ]; then
+    "$_curl" -LfsS "$1" --output "$2"
+    return $?
+  fi
+
+  local _wget; _wget="$(command -v wget)";
+  if [ "x$_wget" != "x" ]; then
+    "$_wget" --max-redirect 1 --quiet "$1" --output-document "$2"
+    return $?
+  fi
+
+  return 1
+}
+
+sha1() {
+  local _sha1_file; _sha1_file="$1";
+
+  if [ ! -f "$_sha1_file" ]; then
+    return 1;
+  fi
+  sha1sum -b "$_sha1_file" | cut -d ' ' -f1
+}
+
+sha1_check() {
+  local _file_path; _file_path="$1";
+  local _file_sha1; _file_sha1="$2";
+
+  [ -f "$_file_path" -a "x$_file_sha1" != "x" ] &&
+    [ "$(sha1 "$_file_path")" == "$_file_sha1" ]
+}
+
+download_sha1() {
+  local _url="$1"
+  local _file="$2"
+  local _sha1="$3"
+
+  if [ -f "$_file" ] && sha1_check "$_file" "$_sha1"; then
+    return 0;
+  fi
+
+  download "$_url" "$_file" && sha1_check "$_file" "$_sha1"
+}
+
+extract_tgz() {
+  local _tgz_url="$1"
+  local _tgz_sha1="$2"
+  local _tgz_basename="$(basename "$_tgz_url")" 
+  local _tgz_cache="$crater_cache_dir/$_tgz_basename"
+  local _tgz_dir_basename="${_tgz_basename%.tar.gz}"
+
+  local _tmp_dir;
+  
+  download_sha1 "$_tgz_url" "$_tgz_cache" "$_tgz_sha1" &&
+    _tmp_dir="$(mktemp -d --tmpdir="$crater_tmp_dir" "$_tgz_basename.XXXX")" &&
+    tar -xzf "$_tgz_cache" -C "$_tmp_dir" &&
+    echo "$_tmp_dir/"*
+}
+
+mark_installed() {
+  local _sha1;
+  for _sha1 in $@; do
+    touch "$crater_install_dir/.installed_$_sha1" || return $?
+  done
+}
+
+check_installed() {
+  local _sha1;
+  for _sha1 in $@; do
+    if [ ! -f "$crater_install_dir/.installed_$_sha1" ]; then
+      return 1;
+    fi
+  done
+}
+
+install_lua() {
+  local _install_prefix; _install_prefix="$crater_install_dir";
+  (
+    set -e
+
+    local _lua_src;
+    _lua_src="$(extract_tgz "$1" "$2")" || return $?
+
+    cd "$_lua_src"
+    local MAKEOPTS;
+    if grep -q LuaJIT Makefile; then
+      MAKEOPTS="PREFIX='$_install_prefix' INSTALL_INC='$_install_prefix/include'"
+    else
+      (rm src/luaconf.h; sed 's/#define LUA_ROOT[ \t].*/#define LUA_ROOT\t"'"$(echo "${_install_prefix}/" | sed 's/\//\\\//g')"'"/g' > src/luaconf.h) < src/luaconf.h
+      MAKEOPTS="INSTALL_TOP='$_install_prefix' linux"
+    fi
+
+    make -j8 $MAKEOPTS
+    make $MAKEOPTS install
+
+    if [ -f "$_install_prefix/bin/luajit" ]; then
+      (cd "$_install_prefix/bin" && ln -s luajit lua)
+    fi
+  ) > "$crater_install_dir/.log_install_lua" 2>&1
+}
+
+install_luarocks() {
+  local _install_prefix; _install_prefix="$crater_install_dir";
+  (
+    local _luarocks_src;
+    _luarocks_src="$(extract_tgz "$1" "$2")" &&
+      cd "$_luarocks_src" &&
+      ./configure --prefix="$_install_prefix" --sysconfdir="$_install_prefix" --with-lua="$_install_prefix" --force-config &&
+      make &&
+      make install
+  ) > "$crater_install_dir/.log_install_luarocks" 2>&1
+}
+
+lua="lua-5.2.0"
+luarocks="luarocks-2.2.0"
+
+lua_tgz_url="$(package_url $lua)"
+lua_tgz_sha1="$(package_sha1sum $lua)"
+
+luarocks_tgz_url="$(package_url $luarocks)"
+luarocks_tgz_sha1="$(package_sha1sum $luarocks)"
+
+crater_tmp_dir="$PWD/.crater/tmp"
+crater_cache_dir="$PWD/.crater/cache"
+crater_install_dir="$PWD/.crater/lua_${lua_tgz_sha1}/luarocks_${luarocks_tgz_sha1}"
+
+mkdir -p "$crater_tmp_dir" "$crater_cache_dir" "$crater_install_dir"
+
+if ! check_installed "$lua_tgz_sha1" "$luarocks_tgz_sha1" ; then
+  rm -rf "$crater_install_dir/"{*,.[!.]*,..?*}
+  install_lua "$lua_tgz_url" "$lua_tgz_sha1" &&
+    install_luarocks "$luarocks_tgz_url" "$luarocks_tgz_sha1" &&
+    mark_installed "$lua_tgz_sha1" "$luarocks_tgz_sha1" # &&
+    #rm -rf "$crater_tmp_dir/"{*,.[!.]*,..?*}
+fi || exit $?
+
+export PATH="$crater_install_dir/bin:$PATH"
+if [ $# -gt 0 ]; then
+  exec $@
+fi
