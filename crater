@@ -25,8 +25,10 @@ luajit-2.0.0 b942f05d41ee193becad285618e7874d113cb976 http://www.luajit.org/down
 luajit-2.0.1 330492aa5366e4e60afeec72f15e44df8a794db5 http://www.luajit.org/download/LuaJIT-2.0.1.tar.gz
 luajit-2.0.2 d21426c4fc6ad8888255139039a014f7e28e7300 http://www.luajit.org/download/LuaJIT-2.0.2.tar.gz
 luajit-2.0.3 2db39e7d1264918c2266b0436c313fbd12da4ceb http://www.luajit.org/download/LuaJIT-2.0.3.tar.gz
-luarocks-2.1.2 69ea9b641a5066b1f316847494d8c63a4693977d https://github.com/keplerproject/luarocks/archive/v2.1.2.tar.gz
-luarocks-2.2.0 8b29e1a71f5c8f6464a17c607f8d0be1cf76fcef https://github.com/keplerproject/luarocks/archive/v2.2.0.tar.gz
+luarocks-2.1.2 406253d15c9d50bb0d09efa9807fb2ddd31cba9d http://keplerproject.github.io/luarocks/releases/luarocks-2.1.2.tar.gz
+luarocks-2.2.0 e2de00f070d66880f3766173019c53a23229193d http://keplerproject.github.io/luarocks/releases/luarocks-2.2.0.tar.gz
+luarocks-2.2.1 82b858889e31ec0eb4d05ce7ea3a72fdf5403aad http://keplerproject.github.io/luarocks/releases/luarocks-2.2.1.tar.gz
+luarocks-2.2.2 eb867374e5a11edb705fd9fab3b47b083a9e55a6 http://keplerproject.github.io/luarocks/releases/luarocks-2.2.2.tar.gz
 PACKAGES
   echo "$_packages"
 }
@@ -135,7 +137,7 @@ install_lua() {
   local _install_prefix; _install_prefix="$crater_install_dir";
   (
     set -e
-
+    
     local _lua_src;
     _lua_src="$(extract_tgz "$1" "$2")" || return $?
 
@@ -171,8 +173,8 @@ install_luarocks() {
   ) > "$crater_install_dir/.log_install_luarocks" 2>&1
 }
 
-CRATER_LUA=${CRATER_LUA:="lua-5.2.0"}
-CRATER_LUAROCKS=${CRATER_LUAROCKS:="luarocks-2.2.0"}
+CRATER_LUA=${CRATER_LUA:="lua-5.3.0"}
+CRATER_LUAROCKS=${CRATER_LUAROCKS:="luarocks-2.2.2"}
 
 lua_tgz_url="$(package_url $CRATER_LUA)"
 lua_tgz_sha1="$(package_sha1sum $CRATER_LUA)"
@@ -188,6 +190,8 @@ crater_install_dir="$CRATER_ROOT/${CRATER_LUA}/${CRATER_LUAROCKS}"
 mkdir -p "$crater_tmp_dir" "$crater_cache_dir" "$crater_install_dir"
 
 (
+  set -x; export SHELLOPTS;
+
   if ! check_installed "$lua_tgz_sha1" "$luarocks_tgz_sha1" ; then
     rm -rf "$crater_install_dir/"{*,.[!.]*,..?*}
     install_lua "$lua_tgz_url" "$lua_tgz_sha1" &&
@@ -195,7 +199,7 @@ mkdir -p "$crater_tmp_dir" "$crater_cache_dir" "$crater_install_dir"
       mark_installed "$lua_tgz_sha1" "$luarocks_tgz_sha1" &&
       rmdir "$crater_tmp_dir"/*
   fi
-) > "$CRATER_ROOT"/.lastlog 2>&1 || exit $?
+) > "$CRATER_ROOT"/lastlog 2>&1 || exit $?
 
 if [ $# -gt 0 ]; then
   PATH="$crater_install_dir/bin:$PATH" exec "$@"
