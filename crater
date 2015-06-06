@@ -33,19 +33,19 @@ package_versions(){
 }
 
 package() {
-  local _version; _version=$1;
+  local _version; _version="$1";
   (set -o pipefail; packages | grep "^$_version ")
   return $?
 }
 
 package_sha1sum() {
-  local _version; _version=$1;
+  local _version; _version="$1";
   (set -o pipefail;  package "$_version" | cut -d ' ' -f2)
   return $?
 }
 
 package_url() {
-  local _version; _version=$1;
+  local _version; _version="$1";
   (set -o pipefail; package "$_version" | cut -d ' ' -f3)
   return $?
 }
@@ -67,7 +67,7 @@ download() {
 }
 
 sha1() {
-  local _sha1_file; _sha1_file="$1";
+  local _sha1_file; _sha1_file="$1"; shift
 
   if [ ! -f "$_sha1_file" ]; then
     return 1;
@@ -76,17 +76,17 @@ sha1() {
 }
 
 sha1_check() {
-  local _file_path; _file_path="$1";
-  local _file_sha1; _file_sha1="$2";
+  local _file_path; _file_path="$1"; shift
+  local _file_sha1; _file_sha1="$1"; shift
 
   [ -f "$_file_path" -a "x$_file_sha1" != "x" ] &&
     [ "$(sha1 "$_file_path")" == "$_file_sha1" ]
 }
 
 download_sha1() {
-  local _url="$1"
-  local _file="$2"
-  local _sha1="$3"
+  local _url; _url="$1"; shift
+  local _file; _file="$1"; shift
+  local _sha1; _sha1="$1"; shift
 
   if [ -f "$_file" ] && sha1_check "$_file" "$_sha1"; then
     return 0;
@@ -96,11 +96,12 @@ download_sha1() {
 }
 
 extract_tgz() {
-  local _tgz_url="$1"
-  local _tgz_sha1="$2"
-  local _tgz_basename="$(basename "$_tgz_url")" 
-  local _tgz_cache="$crater_cache_dir/$_tgz_basename"
-  local _tgz_dir_basename="${_tgz_basename%.tar.gz}"
+  local _tgz_url; _tgz_url="$1"; shift
+  local _tgz_sha1; _tgz_sha1="$1"; shift
+
+  local _tgz_basename; _tgz_basename="$(basename "$_tgz_url")" 
+  local _tgz_cache; _tgz_cache="$crater_cache_dir/$_tgz_basename"
+  local _tgz_dir_basename; _tgz_dir_basename="${_tgz_basename%.tar.gz}"
 
   local _tmp_dir;
   
