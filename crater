@@ -146,6 +146,7 @@ install_lua() {
 
     make -j8 $MAKEOPTS
     make $MAKEOPTS install
+    cd ../; rm -rvf "$_lua_src";
 
     if [ -f "$_install_prefix/bin/luajit" ]; then
       (cd "$_install_prefix/bin" && ln -s luajit lua)
@@ -161,7 +162,8 @@ install_luarocks() {
       cd "$_luarocks_src" &&
       ./configure --prefix="$_install_prefix" --sysconfdir="$_install_prefix" --with-lua="$_install_prefix" --force-config &&
       make &&
-      make install
+      make install &&
+      cd ../ && rm -rvf "$_luarocks_src"
   ) > "$crater_install_dir/.log_install_luarocks" 2>&1
 }
 
@@ -176,7 +178,7 @@ luarocks_tgz_sha1="$(package_sha1sum $luarocks)"
 
 crater_tmp_dir="$PWD/.crater/tmp"
 crater_cache_dir="$PWD/.crater/cache"
-crater_install_dir="$PWD/.crater/lua_${lua_tgz_sha1}/luarocks_${luarocks_tgz_sha1}"
+crater_install_dir="$PWD/.crater/${lua}/${luarocks}"
 
 mkdir -p "$crater_tmp_dir" "$crater_cache_dir" "$crater_install_dir"
 
@@ -184,8 +186,8 @@ if ! check_installed "$lua_tgz_sha1" "$luarocks_tgz_sha1" ; then
   rm -rf "$crater_install_dir/"{*,.[!.]*,..?*}
   install_lua "$lua_tgz_url" "$lua_tgz_sha1" &&
     install_luarocks "$luarocks_tgz_url" "$luarocks_tgz_sha1" &&
-    mark_installed "$lua_tgz_sha1" "$luarocks_tgz_sha1" # &&
-    #rm -rf "$crater_tmp_dir/"{*,.[!.]*,..?*}
+    mark_installed "$lua_tgz_sha1" "$luarocks_tgz_sha1" &&
+    rmdir "$crater_tmp_dir"/*
 fi || exit $?
 
 export PATH="$crater_install_dir/bin:$PATH"
