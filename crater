@@ -174,8 +174,17 @@ install_luarocks() {
   ) > "$crater_install_dir/.log_install_luarocks" 2>&1
 }
 
-CRATER_LUA=${CRATER_LUA:="lua-5.3.0"}
-CRATER_LUAROCKS=${CRATER_LUAROCKS:="luarocks-2.2.2"}
+CRATER_ROOT=${CRATER_ROOT:="$PWD/.crater"}
+
+if [ -L "$CRATER_ROOT/current" -a -z "$CRATER_LUA" -a -z "$CRATER_LUAROCKS" ]; then
+  crater_install_dir="$(readlink -f "$CRATER_ROOT/current")"
+  CRATER_LUAROCKS=$(basename "$crater_install_dir")
+  CRATER_LUA="$(basename "$(dirname "$crater_install_dir")")"
+else
+  CRATER_LUA=${CRATER_LUA:="lua-5.3.0"}
+  CRATER_LUAROCKS=${CRATER_LUAROCKS:="luarocks-2.2.2"}
+  crater_install_dir="$CRATER_ROOT/${CRATER_LUA}/${CRATER_LUAROCKS}"
+fi
 
 lua_tgz_url="$(package_url $CRATER_LUA)"
 lua_tgz_sha1="$(package_sha1sum $CRATER_LUA)"
@@ -183,10 +192,8 @@ lua_tgz_sha1="$(package_sha1sum $CRATER_LUA)"
 luarocks_tgz_url="$(package_url $CRATER_LUAROCKS)"
 luarocks_tgz_sha1="$(package_sha1sum $CRATER_LUAROCKS)"
 
-CRATER_ROOT=${CRATER_ROOT:="$PWD/.crater"}
 crater_tmp_dir="$CRATER_ROOT/tmp"
 crater_cache_dir="$CRATER_ROOT/cache"
-crater_install_dir="$CRATER_ROOT/${CRATER_LUA}/${CRATER_LUAROCKS}"
 
 mkdir -p "$crater_tmp_dir" "$crater_cache_dir" "$crater_install_dir"
 
@@ -200,8 +207,12 @@ mkdir -p "$crater_tmp_dir" "$crater_cache_dir" "$crater_install_dir"
       mark_installed "$lua_tgz_sha1" "$luarocks_tgz_sha1" &&
       rmdir "$crater_tmp_dir"/*
   fi
+  if [ "$(readlink -f "$CRATER_ROOT/current")" != "$crater_install_dir" ]; then
+    ln -nfs "$crater_install_dir" "$CRATER_ROOT/current"
+  fi
 ) > "$CRATER_ROOT"/lastlog 2>&1 || exit $?
 
+export PATH="$crater_install_dir/bin:$PATH"
 if [ $# -gt 0 ]; then
-  PATH="$crater_install_dir/bin:$PATH" exec "$@"
+   exec "$@"
 fi
