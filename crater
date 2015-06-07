@@ -76,10 +76,7 @@ download() {
 sha1() {
   local _sha1_file; _sha1_file="$1"; shift
 
-  if [ ! -f "$_sha1_file" ]; then
-    return 1;
-  fi
-  sha1sum -b "$_sha1_file" | cut -d ' ' -f1
+  (set -o pipefail; sha1sum -b "$_sha1_file" 2> /dev/null | cut -d ' ' -f1)
 }
 
 sha1_check() {
@@ -135,12 +132,15 @@ check_installed() {
 }
 
 install_lua() {
+  local _lua_tgz_url; _lua_tgz_url="$1"; shift
+  local _lua_tgz_sha1; _lua_tgz_sha1="$1"; shift
+
   local _install_prefix; _install_prefix="$crater_install_dir";
   (
     set -e
     
     local _lua_src;
-    _lua_src="$(extract_tgz "$1" "$2")" || return $?
+    _lua_src="$(extract_tgz "$_lua_tgz_url" "$_lua_tgz_sha1")" || return $?
 
     cd "$_lua_src"
     local MAKEOPTS;
@@ -162,10 +162,13 @@ install_lua() {
 }
 
 install_luarocks() {
+  local _luarocks_tgz_url; _luarocks_tgz_url="$1"; shift
+  local _luarocks_tgz_sha1; _luarocks_tgz_sha1="$1"; shift
+
   local _install_prefix; _install_prefix="$crater_install_dir";
   (
     local _luarocks_src;
-    _luarocks_src="$(extract_tgz "$1" "$2")" &&
+    _luarocks_src="$(extract_tgz "$_luarocks_tgz_url" "$_luarocks_tgz_sha1")" &&
       cd "$_luarocks_src" &&
       ./configure --prefix="$_install_prefix" --sysconfdir="$_install_prefix" --with-lua="$_install_prefix" --force-config &&
       make &&
