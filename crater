@@ -131,6 +131,25 @@ check_installed() {
   done
 }
 
+check_compile() {
+   local _src; _src="$1"; shift
+   #local _CFLAGS;  if [ $# -gt 0 ]; then _CFLAGS="$1"; shift; fi
+   #local _LDFLAGS; if [ $# -gt 0 ]; then _LDFLAGS="$1"; shift; fi
+
+
+   echo "$_src" | 
+   if [ $# -gt 0 ]; then
+     cc -o /dev/null -x c - "$@" 2> /dev/null;
+   else
+     cc -o /dev/null -x c - 2> /dev/null;
+   fi
+}
+
+check_library() {
+  local _library; _library="$1"; shift
+  check_compile "int main(){}" "-l$_library"
+}
+
 install_lua() {
   local _lua_tgz_url; _lua_tgz_url="$1"; shift
   local _lua_tgz_sha1; _lua_tgz_sha1="$1"; shift
@@ -146,6 +165,11 @@ install_lua() {
       MAKEOPTS="PREFIX='$_install_prefix' INSTALL_INC='$_install_prefix/include'"
     else
       (rm src/luaconf.h; sed 's/#define LUA_ROOT[ \t].*/#define LUA_ROOT\t"'"$(echo "${_install_prefix}/" | sed 's/\//\\\//g')"'"/g' > src/luaconf.h) < src/luaconf.h
+      if ! check_library 'readline'; then
+        # disable readline support
+        sed -i'' '/LUA_USE_READLINE/d' src/luaconf.h
+        sed -i'' 's/-lreadline//g' src/Makefile
+      fi
       MAKEOPTS="INSTALL_TOP='$_install_prefix' linux"
     fi
 
