@@ -170,6 +170,11 @@ install_lua() {
         sed -i'' '/LUA_USE_READLINE/d' src/luaconf.h
         sed -i'' 's/-lreadline//g' src/Makefile
       fi
+      if ! check_library 'ncurses'; then
+        # disable ncurses support (lua-5.2.x?)
+        sed -i'' 's/-lncurses//g' src/Makefile
+      fi
+
       MAKEOPTS="INSTALL_TOP='$_install_prefix' linux"
     fi
 
