@@ -25,7 +25,7 @@ luajit-2.0.0 b942f05d41ee193becad285618e7874d113cb976 http://www.luajit.org/down
 luajit-2.0.1 330492aa5366e4e60afeec72f15e44df8a794db5 http://www.luajit.org/download/LuaJIT-2.0.1.tar.gz
 luajit-2.0.2 d21426c4fc6ad8888255139039a014f7e28e7300 http://www.luajit.org/download/LuaJIT-2.0.2.tar.gz
 luajit-2.0.3 2db39e7d1264918c2266b0436c313fbd12da4ceb http://www.luajit.org/download/LuaJIT-2.0.3.tar.gz
-luajit-2.0.4 6e533675180300e85d12c4bbeea2d0e41ad21172 http://luajit.org/download/LuaJIT-2.0.4.tar.gz
+luajit-2.0.4 6e533675180300e85d12c4bbeea2d0e41ad21172 http://www.luajit.org/download/LuaJIT-2.0.4.tar.gz
 luarocks-2.1.2 406253d15c9d50bb0d09efa9807fb2ddd31cba9d http://keplerproject.github.io/luarocks/releases/luarocks-2.1.2.tar.gz
 luarocks-2.2.0 e2de00f070d66880f3766173019c53a23229193d http://keplerproject.github.io/luarocks/releases/luarocks-2.2.0.tar.gz
 luarocks-2.2.1 82b858889e31ec0eb4d05ce7ea3a72fdf5403aad http://keplerproject.github.io/luarocks/releases/luarocks-2.2.1.tar.gz
