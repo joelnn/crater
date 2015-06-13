@@ -137,8 +137,6 @@ install_lua() {
 
   local _install_prefix; _install_prefix="$crater_install_dir";
   (
-    set -e
-    
     local _lua_src;
     _lua_src="$(extract_tgz "$_lua_tgz_url" "$_lua_tgz_sha1")" || return $?
 
@@ -151,13 +149,15 @@ install_lua() {
       MAKEOPTS="INSTALL_TOP='$_install_prefix' linux"
     fi
 
-    make -j8 $MAKEOPTS
-    make $MAKEOPTS install
-    cd ../; rm -rvf "$_lua_src";
+    local _install_rc;
+    make -j8 $MAKEOPTS &&
+      make $MAKEOPTS install &&
+      cd ../ &&
+      rm -rvf "$_lua_src" &&
+      if [ -f "$_install_prefix/bin/luajit" ]; then
+        (cd "$_install_prefix/bin" && ln -s luajit lua)
+      fi
 
-    if [ -f "$_install_prefix/bin/luajit" ]; then
-      (cd "$_install_prefix/bin" && ln -s luajit lua)
-    fi
   ) > "$crater_install_dir/.log_install_lua" 2>&1
 }
 
@@ -178,6 +178,13 @@ install_luarocks() {
 }
 
 CRATER_ROOT=${CRATER_ROOT:="$PWD/.crater"}
+# require that CRATER_ROOT be a dot-dir prefixed with '.crater'.
+# since crater will be "rm -rf"-ing things beneath this dir, and
+# generally treating it as its own space, we need to make sure
+# it's not something like '/' or '/home/foo' or '/usr'.
+if [[ "$(basename "$CRATER_ROOT")" != ".crater"* ]]; then
+  exit 1;
+fi
 
 if [ -L "$CRATER_ROOT/current" -a -z "$CRATER_LUA" -a -z "$CRATER_LUAROCKS" ]; then
   crater_install_dir="$(readlink -f "$CRATER_ROOT/current")"
@@ -208,8 +215,8 @@ mkdir -p "$crater_tmp_dir" "$crater_cache_dir" "$crater_install_dir"
     install_lua "$lua_tgz_url" "$lua_tgz_sha1" &&
       install_luarocks "$luarocks_tgz_url" "$luarocks_tgz_sha1" &&
       mark_installed "$lua_tgz_sha1" "$luarocks_tgz_sha1" &&
-      rmdir "$crater_tmp_dir"/*
-  fi
+      rm -rf "$crater_tmp_dir"/{*,.[!.]*,..?*}
+  fi || exit $?
   if [ "$(readlink -f "$CRATER_ROOT/current")" != "$crater_install_dir" ]; then
     ln -nfs "$crater_install_dir" "$CRATER_ROOT/current"
   fi
