@@ -186,15 +186,19 @@ if [[ "$(basename "$CRATER_ROOT")" != ".crater"* ]]; then
   exit 1;
 fi
 
-if [ -L "$CRATER_ROOT/current" -a -z "$CRATER_LUA" -a -z "$CRATER_LUAROCKS" ]; then
-  crater_install_dir="$(readlink -f "$CRATER_ROOT/current")"
-  CRATER_LUAROCKS=$(basename "$crater_install_dir")
-  CRATER_LUA="$(basename "$(dirname "$crater_install_dir")")"
+if [ -d "$CRATER_ROOT/current" -a \( -z "$CRATER_LUA" -o -z "$CRATER_LUAROCKS" \) ]; then
+  crater_current="$(readlink -e "$CRATER_ROOT/current")"
+  if [ -z "$CRATER_LUAROCKS" ]; then
+    CRATER_LUAROCKS=$(basename "$crater_current")
+  fi
+  if [ -z "$CRATER_LUA" ]; then
+    CRATER_LUA="$(basename "$(dirname "$crater_current")")"
+  fi
 else
   CRATER_LUA=${CRATER_LUA:="lua-5.3.0"}
   CRATER_LUAROCKS=${CRATER_LUAROCKS:="luarocks-2.2.2"}
-  crater_install_dir="$CRATER_ROOT/${CRATER_LUA}/${CRATER_LUAROCKS}"
 fi
+crater_install_dir="$CRATER_ROOT/${CRATER_LUA}/${CRATER_LUAROCKS}"
 
 lua_tgz_url="$(package_url $CRATER_LUA)"
 lua_tgz_sha1="$(package_sha1sum $CRATER_LUA)"
