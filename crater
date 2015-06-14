@@ -58,6 +58,10 @@ package_url() {
 }
 
 check_prereqs() {
+  if ! command -v 'cc'; then
+    echo "'cc' (C compiler) not installed, required to build lua." 1>&2
+    return 1
+  fi
   if ! command -v 'unzip'; then
     echo "'unzip' not installed, required by luarocks." 1>&2
     return 1
@@ -140,9 +144,6 @@ check_installed() {
 
 check_compile() {
    local _src; _src="$1"; shift
-   #local _CFLAGS;  if [ $# -gt 0 ]; then _CFLAGS="$1"; shift; fi
-   #local _LDFLAGS; if [ $# -gt 0 ]; then _LDFLAGS="$1"; shift; fi
-
 
    echo "$_src" | 
    if [ $# -gt 0 ]; then
