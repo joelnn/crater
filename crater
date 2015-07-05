@@ -224,7 +224,8 @@ CRATER_ROOT=${CRATER_ROOT:="$PWD/.crater"}
 # since crater will be "rm -rf"-ing things beneath this dir, and
 # generally treating it as its own space, we need to make sure
 # it's not something like '/' or '/home/foo' or '/usr'.
-if [[ "$(basename "$CRATER_ROOT")" != ".crater"* ]]; then
+CRATER_ROOT="$(readlink -f "$CRATER_ROOT")"
+if [[ "$?" -ne "0" || "$(basename "$CRATER_ROOT")" != ".crater"* ]]; then
   if is_sourced; then
     return 1;
   else
