@@ -1,6 +1,8 @@
 #!/bin/bash
 
-set -e
+is_sourced() {
+  [ "$0" != "$BASH_SOURCE" ]
+}
 
 packages() {
   local _packages;
@@ -62,6 +64,7 @@ check_prereqs() {
     echo "'cc' (C compiler) not installed, required to build lua." 1>&2
     return 1
   fi
+
   if ! command -v 'unzip'; then
     echo "'unzip' not installed, required by luarocks." 1>&2
     return 1
@@ -146,11 +149,11 @@ check_compile() {
    local _src; _src="$1"; shift
 
    echo "$_src" | 
-   if [ $# -gt 0 ]; then
-     cc -o /dev/null -x c - "$@" 2> /dev/null;
-   else
-     cc -o /dev/null -x c - 2> /dev/null;
-   fi
+     if [ $# -gt 0 ]; then
+       cc -o /dev/null -x c - "$@" 2> /dev/null;
+     else
+       cc -o /dev/null -x c - 2> /dev/null;
+     fi
 }
 
 check_library() {
@@ -222,7 +225,11 @@ CRATER_ROOT=${CRATER_ROOT:="$PWD/.crater"}
 # generally treating it as its own space, we need to make sure
 # it's not something like '/' or '/home/foo' or '/usr'.
 if [[ "$(basename "$CRATER_ROOT")" != ".crater"* ]]; then
-  exit 1;
+  if is_sourced; then
+    return 1;
+  else
+    exit 1;
+  fi
 fi
 
 if [ -d "$CRATER_ROOT/current" -a \( -z "$CRATER_LUA" -o -z "$CRATER_LUAROCKS" \) ]; then
@@ -264,9 +271,23 @@ mkdir -p "$crater_tmp_dir" "$crater_cache_dir" "$crater_install_dir"
   if [ "$(readlink -f "$CRATER_ROOT/current")" != "$crater_install_dir" ]; then
     ln -nfs "$crater_install_dir" "$CRATER_ROOT/current"
   fi
-) > "$CRATER_ROOT"/lastlog 2>&1 || exit $?
-
-export PATH="$crater_install_dir/bin:$PATH"
-if [ $# -gt 0 ]; then
-   exec "$@"
+) > "$CRATER_ROOT"/lastlog 2>&1
+install_result=$?
+if [ "$install_result" -ne 0 ]; then
+  if is_sourced; then
+    return $install_result
+  else
+    exit $install_result
+  fi
 fi
+
+export CRATER_PATH_PREFIX="$crater_install_dir/bin"
+if [ -z "$CRATER_PATH_SUFFIX" ]; then
+  export CRATER_PATH_SUFFIX="$PATH"
+fi
+export PATH="$CRATER_PATH_PREFIX:$CRATER_PATH_SUFFIX"
+
+if [ $# -gt 0 ]; then
+  exec "$@"
+fi
+
