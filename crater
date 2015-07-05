@@ -219,7 +219,7 @@ install_luarocks() {
   return ${PIPESTATUS[0]};
 }
 
-CRATER_ROOT=${CRATER_ROOT:="$PWD/.crater"}
+: ${CRATER_ROOT:="$PWD/.crater"}
 # require that CRATER_ROOT be a dot-dir prefixed with '.crater'.
 # since crater will be "rm -rf"-ing things beneath this dir, and
 # generally treating it as its own space, we need to make sure
@@ -242,8 +242,8 @@ if [ -d "$CRATER_ROOT/current" -a \( -z "$CRATER_LUA" -o -z "$CRATER_LUAROCKS" \
     CRATER_LUA="$(basename "$(dirname "$crater_current")")"
   fi
 else
-  CRATER_LUA=${CRATER_LUA:="lua-5.3.0"}
-  CRATER_LUAROCKS=${CRATER_LUAROCKS:="luarocks-2.2.2"}
+  : ${CRATER_LUA:="lua-5.3.0"}
+  : ${CRATER_LUAROCKS:="luarocks-2.2.2"}
 fi
 crater_install_dir="$CRATER_ROOT/${CRATER_LUA}/${CRATER_LUAROCKS}"
 
