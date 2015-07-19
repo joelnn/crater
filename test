@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# 'crater' is expected to be a sibling to this 'test' script
+crater_path="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/crater"
+CRATER_SOURCE_ONLY=1 source "$crater_path"
+
+luas=$(package_versions | egrep '(lua|luajit)-')
+luarocks=$(package_versions | grep luarocks-)
+
+for l in $luas; do
+  for r in $luarocks; do
+      echo -n "$l/$r: "
+      CRATER_ROOT="$(dirname "$crater_path")/.crater" CRATER_LUA="$l" CRATER_LUAROCKS="$r" "$crater_path" /bin/bash -c '(lua -v && luarocks help) &> /dev/null'
+      result=$?
+      if [ $result -eq 0 ]; then
+        echo "success"
+      else
+        echo "FAILED"
+      fi
+  done
+  echo
+done

@@ -7,10 +7,6 @@ is_sourced() {
 packages() {
   local _packages;
   read -r -d '' _packages << "PACKAGES"
-lua-5.0.0 88b1bc057857c0db5ace491c4af2c917a2b803bf http://www.lua.org/ftp/lua-5.0.tar.gz
-lua-5.0.1 03b47b4785178aca583333f01d8726a8ab9f7ae7 http://www.lua.org/ftp/lua-5.0.1.tar.gz
-lua-5.0.2 a200cfd20a9a4c7da1206ae45dddf26186a9e0e7 http://www.lua.org/ftp/lua-5.0.2.tar.gz
-lua-5.0.3 e7e91f78b8a8deb09b13436829bed557a46af8ae http://www.lua.org/ftp/lua-5.0.3.tar.gz
 lua-5.1.0 1ae9ec317511d525c7999c842ca0b1ddde84e374 http://www.lua.org/ftp/lua-5.1.tar.gz
 lua-5.1.1 be13878ceef8e1ee7a4201261f0adf09f89f1005 http://www.lua.org/ftp/lua-5.1.1.tar.gz
 lua-5.1.2 8a460d2d7e70e93cb72bf3d584405464763cb5f0 http://www.lua.org/ftp/lua-5.1.2.tar.gz
@@ -23,14 +19,11 @@ lua-5.2.2 0857e41e5579726a4cb96732e80d7aa47165eaf5 http://www.lua.org/ftp/lua-5.
 lua-5.2.3 926b7907bc8d274e063d42804666b40a3f3c124c http://www.lua.org/ftp/lua-5.2.3.tar.gz
 lua-5.2.4 ef15259421197e3d85b7d6e4871b8c26fd82c1cf http://www.lua.org/ftp/lua-5.2.4.tar.gz
 lua-5.3.0 1c46d1c78c44039939e820126b86a6ae12dadfba http://www.lua.org/ftp/lua-5.3.0.tar.gz
-luajit-2.0.0 b942f05d41ee193becad285618e7874d113cb976 http://www.luajit.org/download/LuaJIT-2.0.0.tar.gz
-luajit-2.0.1 330492aa5366e4e60afeec72f15e44df8a794db5 http://www.luajit.org/download/LuaJIT-2.0.1.tar.gz
-luajit-2.0.2 d21426c4fc6ad8888255139039a014f7e28e7300 http://www.luajit.org/download/LuaJIT-2.0.2.tar.gz
-luajit-2.0.3 2db39e7d1264918c2266b0436c313fbd12da4ceb http://www.luajit.org/download/LuaJIT-2.0.3.tar.gz
-luajit-2.0.4 6e533675180300e85d12c4bbeea2d0e41ad21172 http://www.luajit.org/download/LuaJIT-2.0.4.tar.gz
-luarocks-2.1.2 406253d15c9d50bb0d09efa9807fb2ddd31cba9d http://keplerproject.github.io/luarocks/releases/luarocks-2.1.2.tar.gz
-luarocks-2.2.0 e2de00f070d66880f3766173019c53a23229193d http://keplerproject.github.io/luarocks/releases/luarocks-2.2.0.tar.gz
-luarocks-2.2.1 82b858889e31ec0eb4d05ce7ea3a72fdf5403aad http://keplerproject.github.io/luarocks/releases/luarocks-2.2.1.tar.gz
+luajit-2.0.0 b942f05d41ee193becad285618e7874d113cb976 http://luajit.org/download/LuaJIT-2.0.0.tar.gz
+luajit-2.0.1 330492aa5366e4e60afeec72f15e44df8a794db5 http://luajit.org/download/LuaJIT-2.0.1.tar.gz
+luajit-2.0.2 d21426c4fc6ad8888255139039a014f7e28e7300 http://luajit.org/download/LuaJIT-2.0.2.tar.gz
+luajit-2.0.3 2db39e7d1264918c2266b0436c313fbd12da4ceb http://luajit.org/download/LuaJIT-2.0.3.tar.gz
+luajit-2.0.4 6e533675180300e85d12c4bbeea2d0e41ad21172 http://luajit.org/download/LuaJIT-2.0.4.tar.gz
 luarocks-2.2.2 eb867374e5a11edb705fd9fab3b47b083a9e55a6 http://keplerproject.github.io/luarocks/releases/luarocks-2.2.2.tar.gz
 PACKAGES
   echo "$_packages"
@@ -214,11 +207,14 @@ install_luarocks() {
       ./configure --prefix="$_install_prefix" --sysconfdir="$_install_prefix" --with-lua="$_install_prefix" --force-config &&
       make &&
       make install &&
-      mkdir -p "$_install_prefix/lib/luarocks/rocks" && "$_install_prefix/bin/luarocks-admin" make_manifest --local-tree &&
       cd ../ && rm -rvf "$_luarocks_src"
   ) 2>&1 | tee "$crater_install_dir/.log_install_luarocks"
   return ${PIPESTATUS[0]};
 }
+
+if is_sourced && [ "$CRATER_SOURCE_ONLY" == "1" ]; then
+  return
+fi
 
 : ${CRATER_ROOT:="$PWD/.crater"}
 # require that CRATER_ROOT be a dot-dir prefixed with '.crater'.
