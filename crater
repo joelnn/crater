@@ -214,6 +214,7 @@ install_luarocks() {
       ./configure --prefix="$_install_prefix" --sysconfdir="$_install_prefix" --with-lua="$_install_prefix" --force-config &&
       make &&
       make install &&
+      mkdir -p "$_install_prefix/lib/luarocks/rocks" && "$_install_prefix/bin/luarocks-admin" make_manifest --local-tree &&
       cd ../ && rm -rvf "$_luarocks_src"
   ) 2>&1 | tee "$crater_install_dir/.log_install_luarocks"
   return ${PIPESTATUS[0]};
