@@ -19,11 +19,13 @@ lua-5.2.2 0857e41e5579726a4cb96732e80d7aa47165eaf5 http://www.lua.org/ftp/lua-5.
 lua-5.2.3 926b7907bc8d274e063d42804666b40a3f3c124c http://www.lua.org/ftp/lua-5.2.3.tar.gz
 lua-5.2.4 ef15259421197e3d85b7d6e4871b8c26fd82c1cf http://www.lua.org/ftp/lua-5.2.4.tar.gz
 lua-5.3.0 1c46d1c78c44039939e820126b86a6ae12dadfba http://www.lua.org/ftp/lua-5.3.0.tar.gz
+lua-5.3.1 1676c6a041d90b6982db8cef1e5fb26000ab6dee http://www.lua.org/ftp/lua-5.3.1.tar.gz
 luajit-2.0.0 b942f05d41ee193becad285618e7874d113cb976 http://luajit.org/download/LuaJIT-2.0.0.tar.gz
 luajit-2.0.1 330492aa5366e4e60afeec72f15e44df8a794db5 http://luajit.org/download/LuaJIT-2.0.1.tar.gz
 luajit-2.0.2 d21426c4fc6ad8888255139039a014f7e28e7300 http://luajit.org/download/LuaJIT-2.0.2.tar.gz
 luajit-2.0.3 2db39e7d1264918c2266b0436c313fbd12da4ceb http://luajit.org/download/LuaJIT-2.0.3.tar.gz
 luajit-2.0.4 6e533675180300e85d12c4bbeea2d0e41ad21172 http://luajit.org/download/LuaJIT-2.0.4.tar.gz
+luajit-2.1.0-beta1 500470455ca36b0faaa52856c8f721784ab7b182 http://luajit.org/download/LuaJIT-2.1.0-beta1.tar.gz 
 luarocks-2.2.2 eb867374e5a11edb705fd9fab3b47b083a9e55a6 http://keplerproject.github.io/luarocks/releases/luarocks-2.2.2.tar.gz
 PACKAGES
   echo "$_packages"
@@ -187,9 +189,22 @@ install_lua() {
       make $MAKEOPTS install &&
       cd ../ &&
       rm -rvf "$_lua_src" &&
-      if [ -f "$_install_prefix/bin/luajit" ]; then
-        (cd "$_install_prefix/bin" && ln -s luajit lua)
+      if [ ! -e "$_install_prefix/bin/lua" ]; then
+        (
+          cd "$_install_prefix/bin"
+          # symlink to luajit
+          for f in luajit*; do
+            if [ -f "$f" ]; then
+              ln -s "$f" lua
+              break
+            fi
+          done
+        )
       fi
+      if [ ! -e "$_install_prefix/bin/lua" ]; then
+        echo 'lua binary not found' 1>&2
+        exit 1
+      fi 
 
   ) 2>&1 | tee "$crater_install_dir/.log_install_lua"
   return ${PIPESTATUS[0]};
