@@ -161,6 +161,7 @@ install_lua() {
   local _lua_tgz_sha1; _lua_tgz_sha1="$1"; shift
 
   local _install_prefix; _install_prefix="$crater_install_dir";
+  mkdir -p "$crater_install_dir" || return $? 
   (
     local _lua_src;
     _lua_src="$(extract_tgz "$_lua_tgz_url" "$_lua_tgz_sha1")" || return $?
@@ -168,8 +169,25 @@ install_lua() {
     cd "$_lua_src"
     local MAKEOPTS;
     if grep -q LuaJIT Makefile; then
+
       MAKEOPTS="PREFIX='$_install_prefix' INSTALL_INC='$_install_prefix/include'"
+      make -j8 $MAKEOPTS &&
+        make $MAKEOPTS install &&
+        if [ ! -e "$_install_prefix/bin/lua" ]; then
+          (
+            cd "$_install_prefix/bin"
+            # symlink to luajit
+            for f in luajit*; do
+              if [ -f "$f" ]; then
+                ln -s "$f" lua
+                break
+              fi
+            done
+          )
+        fi
+
     else
+
       (rm src/luaconf.h; sed 's/#define LUA_ROOT[ \t].*/#define LUA_ROOT\t"'"$(echo "${_install_prefix}/" | sed 's/\//\\\//g')"'"/g' > src/luaconf.h) < src/luaconf.h
       if ! check_library 'readline'; then
         # disable readline support
@@ -181,31 +199,21 @@ install_lua() {
         sed -i'' 's/-lncurses//g' src/Makefile
       fi
 
-      MAKEOPTS="INSTALL_TOP='$_install_prefix' linux"
+      MAKEOPTS="INSTALL_TOP='$_install_prefix'"
+      local _luapc="$_install_prefix/lib/pkgconfig/lua.pc"
+      make -j8 $MAKEOPTS linux &&
+        make $MAKEOPTS linux install &&
+        mkdir -p "$_install_prefix/lib/pkgconfig" &&
+        (make $MAKEOPTS pc > "$_luapc"  || rm -v "$_luapc")
+
     fi
 
-    local _install_rc;
-    make -j8 $MAKEOPTS &&
-      make $MAKEOPTS install &&
-      cd ../ &&
-      rm -rvf "$_lua_src" &&
-      if [ ! -e "$_install_prefix/bin/lua" ]; then
-        (
-          cd "$_install_prefix/bin"
-          # symlink to luajit
-          for f in luajit*; do
-            if [ -f "$f" ]; then
-              ln -s "$f" lua
-              break
-            fi
-          done
-        )
-      fi
-      if [ ! -e "$_install_prefix/bin/lua" ]; then
-        echo 'lua binary not found' 1>&2
-        exit 1
-      fi 
-
+    if [ ! -e "$_install_prefix/bin/lua" ]; then
+      echo 'lua binary not found' 1>&2
+      exit 1
+    fi
+  
+    cd ../ && rm -rvf "$_lua_src"
   ) 2>&1 | tee "$crater_install_dir/.log_install_lua"
   return ${PIPESTATUS[0]};
 }
@@ -295,10 +303,16 @@ if [ "$install_result" -ne 0 ]; then
 fi
 
 export CRATER_PATH_PREFIX="$crater_install_dir/bin"
-if [ -z "$CRATER_PATH_SUFFIX" ]; then
-  export CRATER_PATH_SUFFIX="$PATH"
+if [ -z "$CRATER_PATH_ORIGINAL" ]; then
+  export CRATER_PATH_ORIGINAL="$PATH"
 fi
-export PATH="$CRATER_PATH_PREFIX:$CRATER_PATH_SUFFIX"
+export PATH="$CRATER_PATH_PREFIX:$CRATER_PATH_ORIGINAL"
+
+export CRATER_PKG_CONFIG_PATH_PREFIX="$crater_install_dir/lib/pkgconfig"
+if [ -z "$CRATER_PKG_CONFIG_PATH_ORIGINAL" ]; then
+  export CRATER_PKG_CONFIG_PATH_ORIGINAL="$PKG_CONFIG_PATH"
+fi
+export PKG_CONFIG_PATH="$CRATER_PKG_CONFIG_PATH_PREFIX:$CRATER_PKG_CONFIG_PATH_ORIGINAL"
 
 if [ $# -gt 0 ]; then
   exec "$@"
