@@ -245,7 +245,7 @@ if [ "$CRATER_SOURCE_ONLY" == "1" ] && is_sourced; then
   return
 fi
 
-: ${CRATER_ROOT:="$PWD/.crater"}
+: ${CRATER_ROOT:="$(dirname "$BASH_SOURCE")/.crater"}
 # require that CRATER_ROOT be a dot-dir prefixed with '.crater'.
 # since crater will be "rm -rf"-ing things beneath this dir, and
 # generally treating it as its own space, we need to make sure
