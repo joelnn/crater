@@ -131,16 +131,16 @@ extract_tgz() {
 }
 
 mark_installed() {
-  local _sha1;
-  for _sha1 in $@; do
-    touch "$crater_install_dir/.installed_$_sha1" || return $?
+  local _name;
+  for _name in $@; do
+    touch "$crater_install_dir/.installed_$_name" || return $?
   done
 }
 
 check_installed() {
-  local _sha1;
-  for _sha1 in $@; do
-    if [ ! -f "$crater_install_dir/.installed_$_sha1" ]; then
+  local _name;
+  for _name in $@; do
+    if [ ! -f "$crater_install_dir/.installed_$_name" ]; then
       return 1;
     fi
   done
@@ -241,7 +241,7 @@ install_luarocks() {
   return ${PIPESTATUS[0]};
 }
 
-if is_sourced && [ "$CRATER_SOURCE_ONLY" == "1" ]; then
+if [ "$CRATER_SOURCE_ONLY" == "1" ] && is_sourced; then
   return
 fi
 
@@ -273,38 +273,40 @@ else
 fi
 crater_install_dir="$CRATER_ROOT/${CRATER_LUA}/${CRATER_LUAROCKS}"
 
-lua_tgz_url="$(package_url $CRATER_LUA)"
-lua_tgz_sha1="$(package_sha1sum $CRATER_LUA)"
+if ! check_installed 'all'; then
+  (
+    crater_tmp_dir="$CRATER_ROOT/tmp"
+    crater_cache_dir="$CRATER_ROOT/cache"
 
-luarocks_tgz_url="$(package_url $CRATER_LUAROCKS)"
-luarocks_tgz_sha1="$(package_sha1sum $CRATER_LUAROCKS)"
+    mkdir -p "$crater_tmp_dir" "$crater_cache_dir" "$crater_install_dir"
 
-crater_tmp_dir="$CRATER_ROOT/tmp"
-crater_cache_dir="$CRATER_ROOT/cache"
+    exec &> "$CRATER_ROOT"/lastlog
 
-mkdir -p "$crater_tmp_dir" "$crater_cache_dir" "$crater_install_dir"
+    set -x; export SHELLOPTS;
 
-(
-  set -x; export SHELLOPTS;
+    lua_tgz_url="$(package_url $CRATER_LUA)"
+    lua_tgz_sha1="$(package_sha1sum $CRATER_LUA)"
 
-  if ! check_installed "$lua_tgz_sha1" "$luarocks_tgz_sha1" ; then
+    luarocks_tgz_url="$(package_url $CRATER_LUAROCKS)"
+    luarocks_tgz_sha1="$(package_sha1sum $CRATER_LUAROCKS)"
+
     rm -rf "$crater_install_dir"
     check_prereqs &&
-      install_lua "$lua_tgz_url" "$lua_tgz_sha1" &&
+      install_lua "$lua_tgz_url" "$lua_tgz_sha1" 'all' &&
       install_luarocks "$luarocks_tgz_url" "$luarocks_tgz_sha1" &&
-      mark_installed "$lua_tgz_sha1" "$luarocks_tgz_sha1" &&
-      rm -rf "$crater_tmp_dir"/{*,.[!.]*,..?*}
-  fi || exit $?
-  if [ "$(readlink -f "$CRATER_ROOT/current")" != "$crater_install_dir" ]; then
-    ln -nfs "$crater_install_dir" "$CRATER_ROOT/current"
-  fi
-) > "$CRATER_ROOT"/lastlog 2>&1
-install_result=$?
-if [ "$install_result" -ne 0 ]; then
-  if is_sourced; then
-    return $install_result
-  else
-    exit $install_result
+      mark_installed "$lua_tgz_sha1" "$luarocks_tgz_sha1" 'all' &&
+      rm -rf "$crater_tmp_dir"/{*,.[!.]*,..?*} || exit $?
+    if [ "$(readlink -f "$CRATER_ROOT/current")" != "$crater_install_dir" ]; then
+      ln -nfs "$crater_install_dir" "$CRATER_ROOT/current"
+    fi
+  )
+  install_result=$?
+  if [ "$install_result" -ne 0 ]; then
+    if is_sourced; then
+      return $install_result
+    else
+      exit $install_result
+    fi
   fi
 fi
 
