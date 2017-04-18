@@ -10,8 +10,7 @@ packages() {
     return 0
   fi
 
-  local _packages;
-  read -r -d '' _packages << "PACKAGES"
+  read -r -d '' CRATER_PACKAGES << "PACKAGES"
 lua-5.1.0 1ae9ec317511d525c7999c842ca0b1ddde84e374 http://www.lua.org/ftp/lua-5.1.tar.gz
 lua-5.1.1 be13878ceef8e1ee7a4201261f0adf09f89f1005 http://www.lua.org/ftp/lua-5.1.1.tar.gz
 lua-5.1.2 8a460d2d7e70e93cb72bf3d584405464763cb5f0 http://www.lua.org/ftp/lua-5.1.2.tar.gz
@@ -39,7 +38,7 @@ luarocks-2.2.2 eb867374e5a11edb705fd9fab3b47b083a9e55a6 http://keplerproject.git
 luarocks-2.3.0 5f1e1658ef8c7c9710fbc751cad79eb69ae2a891 http://luarocks.github.io/luarocks/releases/luarocks-2.3.0.tar.gz
 luarocks-2.4.2 3e595956eab7192036a4993c24125284cd789894 http://luarocks.github.io/luarocks/releases/luarocks-2.4.2.tar.gz
 PACKAGES
-  echo "$_packages"
+  echo "$CRATER_PACKAGES"
 }
 
 package_versions(){
