@@ -44,7 +44,7 @@ package_versions(){
 
 package() {
   local _version; _version="$1";
-  (set -o pipefail; packages | grep "^$_version ")
+  (set -o pipefail; packages | grep -- "^$_version ")
   return $?
 }
 
@@ -133,14 +133,14 @@ extract_tgz() {
 mark_installed() {
   local _name;
   for _name in $@; do
-    touch "$crater_install_dir/.installed_$_name" || return $?
+    touch "$CRATER_CURRENT/.installed_$_name" || return $?
   done
 }
 
 check_installed() {
   local _name;
   for _name in $@; do
-    if [ ! -f "$crater_install_dir/.installed_$_name" ]; then
+    if [ ! -f "$CRATER_CURRENT/.installed_$_name" ]; then
       return 1;
     fi
   done
@@ -166,8 +166,8 @@ install_lua() {
   local _lua_tgz_url; _lua_tgz_url="$1"; shift
   local _lua_tgz_sha1; _lua_tgz_sha1="$1"; shift
 
-  local _install_prefix; _install_prefix="$crater_install_dir";
-  mkdir -p "$crater_install_dir" || return $? 
+  local _install_prefix; _install_prefix="$CRATER_CURRENT";
+  mkdir -p "$CRATER_CURRENT" || return $? 
   (
     local _lua_src;
     _lua_src="$(extract_tgz "$_lua_tgz_url" "$_lua_tgz_sha1")" || return $?
@@ -220,7 +220,7 @@ install_lua() {
     fi
   
     cd ../ && rm -rvf "$_lua_src"
-  ) 2>&1 | tee "$crater_install_dir/.log_install_lua"
+  ) 2>&1 | tee "$CRATER_CURRENT/.log_install_lua"
   return ${PIPESTATUS[0]};
 }
 
@@ -228,7 +228,7 @@ install_luarocks() {
   local _luarocks_tgz_url; _luarocks_tgz_url="$1"; shift
   local _luarocks_tgz_sha1; _luarocks_tgz_sha1="$1"; shift
 
-  local _install_prefix; _install_prefix="$crater_install_dir";
+  local _install_prefix; _install_prefix="$CRATER_CURRENT";
   (
     local _luarocks_src;
     _luarocks_src="$(extract_tgz "$_luarocks_tgz_url" "$_luarocks_tgz_sha1")" &&
@@ -237,7 +237,7 @@ install_luarocks() {
       make &&
       make install &&
       cd ../ && rm -rvf "$_luarocks_src"
-  ) 2>&1 | tee "$crater_install_dir/.log_install_luarocks"
+  ) 2>&1 | tee "$CRATER_CURRENT/.log_install_luarocks"
   return ${PIPESTATUS[0]};
 }
 
@@ -260,63 +260,59 @@ if [[ "$?" -ne "0" || "$(basename "$CRATER_ROOT")" != ".crater"* ]]; then
 fi
 
 if [ -d "$CRATER_ROOT/current" -a \( -z "$CRATER_LUA" -o -z "$CRATER_LUAROCKS" \) ]; then
-  crater_current="$(readlink -e "$CRATER_ROOT/current")"
+  CRATER_CURRENT="$(readlink -e "$CRATER_ROOT/current")"
   if [ -z "$CRATER_LUAROCKS" ]; then
-    CRATER_LUAROCKS=$(basename "$crater_current")
+    CRATER_LUAROCKS=$(basename "$CRATER_CURRENT")
   fi
   if [ -z "$CRATER_LUA" ]; then
-    CRATER_LUA="$(basename "$(dirname "$crater_current")")"
+    CRATER_LUA="$(basename "$(dirname "$CRATER_CURRENT")")"
   fi
 else
   : ${CRATER_LUA:="lua-5.3.4"}
   : ${CRATER_LUAROCKS:="luarocks-2.4.2"}
 fi
-crater_install_dir="$CRATER_ROOT/${CRATER_LUA}/${CRATER_LUAROCKS}"
+CRATER_CURRENT="$CRATER_ROOT/${CRATER_LUA}/${CRATER_LUAROCKS}"
 
-if ! check_installed 'all'; then
-  (
-    crater_tmp_dir="$CRATER_ROOT/tmp"
-    crater_cache_dir="$CRATER_ROOT/cache"
+if ! check_installed 'all' && ! (
+  crater_tmp_dir="$CRATER_ROOT/tmp"
+  crater_cache_dir="$CRATER_ROOT/cache"
 
-    mkdir -p "$crater_tmp_dir" "$crater_cache_dir" "$crater_install_dir"
+  mkdir -p "$crater_tmp_dir" "$crater_cache_dir" "$CRATER_CURRENT"
 
-    exec &> "$CRATER_ROOT"/lastlog
+  exec &> "$CRATER_ROOT"/lastlog
 
-    set -x; export SHELLOPTS;
+  set -x; export SHELLOPTS;
 
-    lua_tgz_url="$(package_url $CRATER_LUA)"
-    lua_tgz_sha1="$(package_sha1sum $CRATER_LUA)"
+  lua_tgz_url="$(package_url "$CRATER_LUA")"
+  lua_tgz_sha1="$(package_sha1sum "$CRATER_LUA")"
 
-    luarocks_tgz_url="$(package_url $CRATER_LUAROCKS)"
-    luarocks_tgz_sha1="$(package_sha1sum $CRATER_LUAROCKS)"
+  luarocks_tgz_url="$(package_url "$CRATER_LUAROCKS")"
+  luarocks_tgz_sha1="$(package_sha1sum "$CRATER_LUAROCKS")"
 
-    rm -rf "$crater_install_dir"
-    check_prereqs &&
-      install_lua "$lua_tgz_url" "$lua_tgz_sha1" 'all' &&
-      install_luarocks "$luarocks_tgz_url" "$luarocks_tgz_sha1" &&
-      mark_installed "$lua_tgz_sha1" "$luarocks_tgz_sha1" 'all' &&
-      rm -rf "$crater_tmp_dir"/{*,.[!.]*,..?*} || exit $?
-    if [ "$(readlink -f "$CRATER_ROOT/current")" != "$crater_install_dir" ]; then
-      ln -nfs "$crater_install_dir" "$CRATER_ROOT/current"
-    fi
-  )
-  install_result=$?
-  if [ "$install_result" -ne 0 ]; then
-    if is_sourced; then
-      return $install_result
-    else
-      exit $install_result
-    fi
+  rm -rf "$CRATER_CURRENT"
+  check_prereqs &&
+    install_lua "$lua_tgz_url" "$lua_tgz_sha1" &&
+    install_luarocks "$luarocks_tgz_url" "$luarocks_tgz_sha1" &&
+    mark_installed "$lua_tgz_sha1" "$luarocks_tgz_sha1" 'all' &&
+    rm -rf "$crater_tmp_dir"/{*,.[!.]*,..?*} || exit $?
+  if [ "$(readlink -f "$CRATER_ROOT/current")" != "$CRATER_CURRENT" ]; then
+    ln -nfs "$CRATER_CURRENT" "$CRATER_ROOT/current"
+  fi
+) then
+  if is_sourced; then
+    return $install_result
+  else
+    exit $install_result
   fi
 fi
-
-export CRATER_PATH_PREFIX="$crater_install_dir/bin"
+export CRATER_CURRENT
+export CRATER_PATH_PREFIX="$CRATER_CURRENT/bin"
 if [ -z "$CRATER_PATH_ORIGINAL" ]; then
   export CRATER_PATH_ORIGINAL="$PATH"
 fi
 export PATH="$CRATER_PATH_PREFIX:$CRATER_PATH_ORIGINAL"
 
-export CRATER_PKG_CONFIG_PATH_PREFIX="$crater_install_dir/lib/pkgconfig"
+export CRATER_PKG_CONFIG_PATH_PREFIX="$CRATER_CURRENT/lib/pkgconfig"
 if [ -z "$CRATER_PKG_CONFIG_PATH_ORIGINAL" ]; then
   export CRATER_PKG_CONFIG_PATH_ORIGINAL="$PKG_CONFIG_PATH"
 fi
