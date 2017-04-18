@@ -5,6 +5,11 @@ is_sourced() {
 }
 
 packages() {
+  if [ -n "${CRATER_PACKAGES:-}" ]; then
+    echo "$CRATER_PACKAGES"
+    return 0
+  fi
+
   local _packages;
   read -r -d '' _packages << "PACKAGES"
 lua-5.1.0 1ae9ec317511d525c7999c842ca0b1ddde84e374 http://www.lua.org/ftp/lua-5.1.tar.gz
@@ -191,7 +196,17 @@ install_lua() {
             done
           )
         fi
-
+        if [ ! -e "$_install_prefix/lib/liblua.a" ]; then
+          (
+            cd "$_install_prefix/lib"
+            for f in libluajit*.a; do
+              if [ -f "$f" ]; then
+                ln -s "$f" liblua.a
+                break
+              fi
+            done
+          )
+        fi
     else
 
       (rm src/luaconf.h; sed 's/#define LUA_ROOT[ \t].*/#define LUA_ROOT\t"'"$(echo "${_install_prefix}/" | sed 's/\//\\\//g')"'"/g' > src/luaconf.h) < src/luaconf.h
@@ -218,7 +233,12 @@ install_lua() {
       echo 'lua binary not found' 1>&2
       exit 1
     fi
-  
+
+    if [ ! -e "$_install_prefix/lib/liblua.a" ]; then
+      echo 'liblua.a not found' 1>&2
+      exit 1
+    fi
+
     cd ../ && rm -rvf "$_lua_src"
   ) 2>&1 | tee "$CRATER_CURRENT/.log_install_lua"
   return ${PIPESTATUS[0]};
@@ -283,11 +303,15 @@ if ! check_installed 'all' && ! (
 
   set -x; export SHELLOPTS;
 
-  lua_tgz_url="$(package_url "$CRATER_LUA")"
-  lua_tgz_sha1="$(package_sha1sum "$CRATER_LUA")"
-
-  luarocks_tgz_url="$(package_url "$CRATER_LUAROCKS")"
-  luarocks_tgz_sha1="$(package_sha1sum "$CRATER_LUAROCKS")"
+  lua_tgz_url="$(package_url "$CRATER_LUA")" &&
+    lua_tgz_sha1="$(package_sha1sum "$CRATER_LUA")" &&
+    luarocks_tgz_url="$(package_url "$CRATER_LUAROCKS")" &&
+    luarocks_tgz_sha1="$(package_sha1sum "$CRATER_LUAROCKS")" ||
+    if is_sourced; then
+      return 1
+    else
+      exit 1
+    fi
 
   rm -rf "$CRATER_CURRENT"
   check_prereqs &&
